@@ -170,6 +170,8 @@ func (p *parser) node(kind int) *node {
 func (p *parser) document() *node {
 	n := p.node(documentNode)
 	n.anchors = make(map[string]*node)
+	n.tag = string(p.event.tag)
+	n.implicit = p.event.implicit
 	p.doc = n
 	p.expect(yaml_DOCUMENT_START_EVENT)
 	n.children = append(n.children, p.parse())
@@ -180,6 +182,8 @@ func (p *parser) document() *node {
 func (p *parser) alias() *node {
 	n := p.node(aliasNode)
 	n.value = string(p.event.anchor)
+	n.tag = string(p.event.tag)
+	n.implicit = p.event.implicit
 	n.alias = p.doc.anchors[n.value]
 	if n.alias == nil {
 		failf("unknown anchor '%s' referenced", n.value)
@@ -200,6 +204,9 @@ func (p *parser) scalar() *node {
 
 func (p *parser) sequence() *node {
 	n := p.node(sequenceNode)
+	n.value = string(p.event.value)
+	n.tag = string(p.event.tag)
+	n.implicit = p.event.implicit
 	p.anchor(n, p.event.anchor)
 	p.expect(yaml_SEQUENCE_START_EVENT)
 	for p.peek() != yaml_SEQUENCE_END_EVENT {
@@ -211,6 +218,9 @@ func (p *parser) sequence() *node {
 
 func (p *parser) mapping() *node {
 	n := p.node(mappingNode)
+	n.value = string(p.event.value)
+	n.tag = string(p.event.tag)
+	n.implicit = p.event.implicit
 	p.anchor(n, p.event.anchor)
 	p.expect(yaml_MAPPING_START_EVENT)
 	for p.peek() != yaml_MAPPING_END_EVENT {
@@ -222,13 +232,15 @@ func (p *parser) mapping() *node {
 
 // ----------------------------------------------------------------------------
 // Decoder, unmarshals a node into a provided value.
+type TagResolver func(tag string, out reflect.Value) (newout reflect.Value, unmarshaled, good bool)
 
 type decoder struct {
-	doc     *node
-	aliases map[*node]bool
-	mapType reflect.Type
-	terrors []string
-	strict  bool
+	doc         *node
+	aliases     map[*node]bool
+	mapType     reflect.Type
+	terrors     []string
+	strict      bool
+	TagResolver TagResolver
 }
 
 var (
@@ -240,8 +252,8 @@ var (
 	ptrTimeType    = reflect.TypeOf(&time.Time{})
 )
 
-func newDecoder(strict bool) *decoder {
-	d := &decoder{mapType: defaultMapType, strict: strict}
+func newDecoder(strict bool, TagResolver TagResolver) *decoder {
+	d := &decoder{mapType: defaultMapType, strict: strict, TagResolver: TagResolver}
 	d.aliases = make(map[*node]bool)
 	return d
 }
@@ -294,6 +306,15 @@ func (d *decoder) prepare(n *node, out reflect.Value) (newout reflect.Value, unm
 	if n.tag == yaml_NULL_TAG || n.kind == scalarNode && n.tag == "" && (n.value == "null" || n.value == "~" || n.value == "" && n.implicit) {
 		return out, false, false
 	}
+	tagsave := n.tag
+	if !resolvableTag(n.tag) && d.TagResolver != nil {
+		out, unmarshaled, good = d.TagResolver(n.tag, out)
+		if unmarshaled {
+			return out, true, good
+		}
+		// Ensure not to call TagResolver again before Unmashaler
+		n.tag = ""
+	}
 	again := true
 	for again {
 		again = false
@@ -307,9 +328,13 @@ func (d *decoder) prepare(n *node, out reflect.Value) (newout reflect.Value, unm
 		if out.CanAddr() {
 			if u, ok := out.Addr().Interface().(Unmarshaler); ok {
 				good = d.callUnmarshaler(n, u)
+				n.tag = tagsave
 				return out, true, good
 			}
 		}
+	}
+	if tagsave != "" {
+		n.tag = tagsave
 	}
 	return out, false, false
 }
