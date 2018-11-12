@@ -378,7 +378,12 @@ func (d *decoder) alias(n *node, out reflect.Value) (good bool) {
 		failf("anchor '%s' value contains itself", n.value)
 	}
 	d.aliases[n] = true
+	// enable customized tag handler on alias
+	// TODO handle the inside tag of alias
+	tagsave := n.alias.tag
+	n.alias.tag = n.tag
 	good = d.unmarshal(n.alias, out)
+	n.alias.tag = tagsave
 	delete(d.aliases, n)
 	return good
 }
