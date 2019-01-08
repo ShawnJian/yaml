@@ -410,6 +410,8 @@ func (d *decoder) scalar(n *node, out reflect.Value) bool {
 				failf("!!binary value contains invalid base64 data")
 			}
 			resolved = string(data)
+		} else if tag == yaml_NULL_TAG {
+			return true
 		}
 	}
 	if resolved == nil {
