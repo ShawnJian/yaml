@@ -1,9 +1,11 @@
 module github.com/shawnjian/yaml
+
+replace gopkg.in/yaml.v2 => github.com/shawnjian/yaml/v2 v2.2.7
+
 go 1.14
 
 require (
-	github.com/kr/pretty v0.2.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
-	gopkg.in/yaml.v2 v2.2.7
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
+	gopkg.in/yaml.v2 v2.3.0
 )
-replace gopkg.in/yaml.v2 => github.com/shawnjian/yaml/v2 v2.2.7
