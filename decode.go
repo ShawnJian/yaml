@@ -418,10 +418,13 @@ func (d *decoder) alias(n *node, out reflect.Value) (good bool) {
 		failf("anchor '%s' value contains itself", n.value)
 	}
 	d.aliases[n] = true
+	tagsave := n.alias.tag
+	n.alias.tag = n.tag
 	d.aliasDepth++
 	good = d.unmarshal(n.alias, out)
 	d.aliasDepth--
 	delete(d.aliases, n)
+	n.alias.tag = tagsave
 	return good
 }
 
@@ -447,6 +450,8 @@ func (d *decoder) scalar(n *node, out reflect.Value) bool {
 				failf("!!binary value contains invalid base64 data")
 			}
 			resolved = string(data)
+		} else if tag == yaml_NULL_TAG {
+			return true
 		}
 	}
 	if resolved == nil {

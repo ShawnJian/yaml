@@ -489,6 +489,22 @@ func yaml_parser_parse_node(parser *yaml_parser_t, event *yaml_event_t, block, i
 		skip_token(parser)
 		return true
 	}
+	if token.typ == yaml_ALIAS_TOKEN {
+		parser.state = parser.states[len(parser.states)-1]
+		parser.states = parser.states[:len(parser.states)-1]
+		*event = yaml_event_t{
+			typ:        yaml_ALIAS_EVENT,
+			start_mark: token.start_mark,
+			end_mark:   token.end_mark,
+			anchor:     token.value,
+			tag:        tag,
+			value:      token.value,
+			implicit:   implicit,
+			style:      yaml_style_t(token.style),
+		}
+		skip_token(parser)
+		return true
+	}
 	if token.typ == yaml_FLOW_SEQUENCE_START_TOKEN {
 		// [Go] Some of the events below can be merged as they differ only on style.
 		end_mark = token.end_mark
