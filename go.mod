@@ -1,4 +1,4 @@
-module yaml
+module github.com/shawnjian/yaml/v2
 
 go 1.14
 
