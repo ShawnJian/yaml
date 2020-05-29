@@ -1,6 +1,6 @@
 module github.com/shawnjian/yaml
 
-replace gopkg.in/yaml.v2 => github.com/shawnjian/yaml/v2 v2.2.7
+replace gopkg.in/yaml.v2 => github.com/shawnjian/yaml/v2 v2.3.0
 
 go 1.14
 
